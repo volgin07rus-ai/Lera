@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Рабочий стол — портфолио</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   Токены
+   ============================================================ */
+:root{
+  --bg:            #0b0d12;
+  --glass:         rgba(255,255,255,.07);
+  --glass-strong:  rgba(255,255,255,.12);
+  --hairline:      rgba(255,255,255,.14);
+  --ink:           #fffefc;          /* цвет подписей — как у десктопных иконок */
+  --ink-dim:       rgba(255,254,252,.62);
+  --accent:        #2f7cf6;          /* выделение иконки */
+
+  --menubar-h:     1.75rem;
+  --dock-h:        4.5rem;
+  --k:             1;                /* масштаб поля иконок, считается по фактическому размеру стола */
+
+  --e-out:    cubic-bezier(.16,1,.3,1);      /* основная на появление */
+  --e-mask:   cubic-bezier(.215,.61,.355,1); /* выезд из-под маски */
+  --e-spring: cubic-bezier(.34,1.56,.64,1);  /* пружина с перелётом */
+  --e-fill:   cubic-bezier(.25,.46,.45,.94); /* заливки */
+}
+
+/* rem-сетка: корневой кегль привязан к ширине окна */
+html{ font-size:16px }
+@media (max-width:1920px){ html{ font-size:0.833333vw } }
+@media (max-width:1440px){ html{ font-size:1.111111vw } }
+@media (max-width:1024px){ html{ font-size:1.5625vw } }
+@media (max-width:640px){  html{ font-size:4.444444vw } }
+
+*,*::before,*::after{ box-sizing:border-box }
+
+html,body{ height:100%; margin:0 }
+
+body{
+  font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  overflow:hidden;               /* десктоп не прокручивается */
+  overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ============================================================
+   Обои
+   ============================================================ */
+.wallpaper{ position:fixed; inset:0; z-index:0; overflow:hidden; background:var(--bg) }
+
+/* Фотография. Кадр вертикальный, окно горизонтальное — режем по ширине,
+   точку смотрения держим чуть выше центра, чтобы лицо не уходило под док. */
+.wallpaper__photo{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; object-position:center 44%;
+  opacity:0; transform:scale(1.03);
+  transition:opacity 1.4s var(--e-out), transform 2.2s var(--e-out);
+}
+.is-booted .wallpaper__photo{ opacity:1; transform:none }
+
+/* Ступени к верху и низу: под ними читаются меню-бар, подписи иконок и док */
+.wallpaper__scrim{
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to bottom,
+    rgba(8,10,14,.50) 0%,   rgba(8,10,14,.22) 22%,
+    rgba(8,10,14,.20) 58%,  rgba(8,10,14,.54) 100%);
+}
+
+.wallpaper::before,
+.wallpaper::after{
+  content:''; position:absolute; border-radius:50%;
+  filter:blur(80px); opacity:0; will-change:opacity, transform;
+  transition:opacity 1.6s var(--e-out);
+}
+/* холодное пятно слева сверху */
+.wallpaper::before{
+  width:80vw; height:80vw; left:-22vw; top:-34vw;
+  background:radial-gradient(circle at 50% 50%, rgba(47,124,246,.55), rgba(47,124,246,0) 62%);
+}
+/* тёплое пятно справа снизу */
+.wallpaper::after{
+  width:72vw; height:72vw; right:-24vw; bottom:-32vw;
+  background:radial-gradient(circle at 50% 50%, rgba(232,88,142,.42), rgba(232,88,142,0) 62%);
+}
+/* запасной вариант: показываем пятна, только если фотография не загрузилась */
+.is-booted.no-photo .wallpaper::before,
+.is-booted.no-photo .wallpaper::after{ opacity:1 }
+
+/* зернистость — снимает «пластиковость» градиента */
+.wallpaper__grain{
+  position:absolute; inset:0; opacity:.07; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   Жидкое стекло — тонкий световой кант, не матовая плашка
+   ============================================================ */
+.glass{
+  position:relative;
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.10);
+  overflow:hidden;
+}
+.glass::before{
+  content:''; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.45) 0%, rgba(255,255,255,.15) 20%,
+    rgba(255,255,255,0)  40%, rgba(255,255,255,0)  60%,
+    rgba(255,255,255,.15) 80%, rgba(255,255,255,.45) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  pointer-events:none;
+}
+
+/* ============================================================
+   Меню-бар
+   ============================================================ */
+.menubar{
+  position:fixed; inset:0 0 auto 0; height:var(--menubar-h); z-index:900;
+  display:flex; align-items:center; gap:.25rem;
+  padding:0 .75rem;
+  font-size:.8125rem; line-height:1;
+  border-radius:0;
+  opacity:0; transform:translateY(-100%);
+  transition:opacity .7s var(--e-out), transform .7s var(--e-out);
+}
+.is-booted .menubar{ opacity:1; transform:none }
+
+.menubar__mark{
+  font-size:.9375rem; line-height:1; padding:0 .5rem;
+  color:var(--ink); opacity:.95;
+}
+.menubar__item{
+  appearance:none; border:0; background:transparent; color:var(--ink);
+  font:inherit; font-weight:500;
+  padding:.28rem .5rem; border-radius:.3rem; cursor:default;
+  transition:background .16s var(--e-fill);
+}
+.menubar__item--bold{ font-weight:700 }
+.hoverable .menubar__item:hover{ background:rgba(255,255,255,.16) }
+
+.menubar__right{ margin-left:auto; display:flex; align-items:center; gap:.85rem }
+.menubar__glyph{ display:block; opacity:.9 }
+.menubar__clock{ font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap }
+.menubar__city{ opacity:.62; margin-right:.35rem }
+.menubar__date{ margin-right:.35rem }
+
+/* ============================================================
+   Десктоп и иконки
+   ============================================================ */
+.desktop{
+  position:fixed; z-index:10;
+  inset:var(--menubar-h) 0 calc(var(--dock-h) + 1.5rem) 0;
+}
+
+.icon{
+  position:absolute;
+  left:var(--x); top:var(--y);
+  width:calc(var(--w) * var(--k));
+  transform:translate(-50%,-50%);
+  display:flex; flex-direction:column; align-items:center; gap:.4rem;
+  appearance:none; border:0; background:transparent; padding:0;
+  font:inherit; color:var(--ink); cursor:default;
+  touch-action:none;
+}
+.icon.is-dragging{ z-index:60 }
+
+.icon__thumb{
+  display:block; width:100%; aspect-ratio:var(--ar,1/1);
+  border-radius:.375rem;
+  background:var(--g);
+  background-size:cover; background-position:center top;
+  /* Плоско, как файлы на реальном столе: лёгкая тень для отрыва от обоев — и всё */
+  box-shadow:0 1px 4px rgba(0,0,0,.28);
+  transition:transform .32s var(--e-spring), box-shadow .32s var(--e-out);
+}
+.hoverable .icon:hover .icon__thumb{
+  transform:translateY(-.15rem) scale(1.045);
+  box-shadow:0 3px 10px rgba(0,0,0,.34);
+}
+.icon:active .icon__thumb{ transform:scale(.965) }
+
+.icon__label{
+  font-size:max(.6875rem, calc(.8125rem * var(--k))); line-height:1.2; font-weight:700;
+  text-transform:uppercase; text-align:center;
+  letter-spacing:.01em;
+  padding:.1rem .3rem; border-radius:.25rem;
+  /* Тень — то, чем macOS вытягивает белую подпись с любых обоев. На светлой
+     брусчатке одного слоя мало: собираем плотный ореол из трёх радиусов,
+     он держит текст и не читается как плашка. */
+  text-shadow:0 1px 2px rgba(0,0,0,.92), 0 0 3px rgba(0,0,0,.8),
+              0 0 7px rgba(0,0,0,.62), 0 0 14px rgba(0,0,0,.4);
+  max-width:100%;
+  overflow-wrap:break-word; hyphens:auto;
+}
+.icon.is-selected .icon__thumb{ box-shadow:0 0 0 2px var(--accent), 0 .6rem 1.4rem rgba(0,0,0,.42) }
+.icon.is-selected .icon__label{ background:var(--accent); text-shadow:none }
+
+.icon:focus-visible{ outline:none }
+.icon:focus-visible .icon__thumb{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--accent) }
+
+/* появление иконок каскадом */
+.icon{ opacity:0; transform:translate(-50%,-50%) translateY(.5rem) scale(.94) }
+.is-booted .icon{
+  opacity:1; transform:translate(-50%,-50%);
+  transition:opacity .7s var(--e-out) var(--d), transform .7s var(--e-out) var(--d);
+}
+.is-booted .icon.is-dragging{ transition:none }
+/* translate(-50%,-50%) пересчитывается вместе с кеглем: без этого иконки
+   заметно переползают весь ресайз, потому что transform тянет транзишен */
+.is-resizing .icon{ transition:none !important }
+
+/* ============================================================
+   Рамка выделения
+   ============================================================ */
+.marquee{
+  position:fixed; z-index:50; display:none; pointer-events:none;
+  border:1px solid rgba(255,255,255,.55);
+  background:rgba(47,124,246,.22);
+  border-radius:.125rem;
+}
+
+/* ============================================================
+   Меню: одна реализация на меню-бар и правый клик
+   ============================================================ */
+.menu{
+  position:fixed; z-index:950; min-width:11.5rem;
+  padding:.3rem; border-radius:.6rem;
+  background:rgba(26,28,36,.72);
+  backdrop-filter:blur(28px) saturate(170%);
+  -webkit-backdrop-filter:blur(28px) saturate(170%);
+  box-shadow:0 1rem 2.5rem rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.13);
+  opacity:0; transform:scale(.96) translateY(-.25rem); transform-origin:top left;
+  transition:opacity .14s var(--e-out), transform .16s var(--e-out);
+}
+.menu.is-open{ opacity:1; transform:none }
+/* гаснущее меню живёт ещё 0.4s до удаления — клики ловить оно не должно */
+.menu:not(.is-open){ pointer-events:none }
+
+.menu__item{
+  display:block; width:100%; text-align:left;
+  appearance:none; border:0; background:transparent; color:var(--ink);
+  font:inherit; font-size:.8125rem; font-weight:500;
+  padding:.34rem .6rem; border-radius:.35rem;
+  white-space:nowrap; cursor:default;
+}
+.menu__item[disabled]{ opacity:.32 }
+.hoverable .menu__item:not([disabled]):hover{ background:var(--accent) }
+.menu__item:not([disabled]):focus-visible{ background:var(--accent); outline:none }
+.menu__sep{ height:1px; margin:.3rem .45rem; background:var(--hairline) }
+
+.menubar__item[aria-expanded="true"]{ background:rgba(255,255,255,.22) }
+
+/* ============================================================
+   Окна
+   ============================================================ */
+.window{
+  position:fixed; z-index:100;
+  width:min(38rem, 92vw);
+  border-radius:.75rem;
+  display:flex; flex-direction:column;
+  box-shadow:0 2.5rem 5rem rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.10);
+  opacity:0; transform:scale(.92) translateY(1rem);
+  transition:opacity .34s var(--e-out), transform .38s var(--e-spring);
+  overflow:hidden;
+}
+.window.is-open{ opacity:1; transform:none }
+.window.is-closing{ opacity:0; transform:scale(.94) translateY(.5rem); transition-duration:.2s }
+
+.window__bar{
+  position:relative;
+  display:flex; align-items:center; gap:.5rem;
+  height:2.25rem; padding:0 .75rem; flex:none;
+  border-bottom:1px solid var(--hairline);
+  cursor:default; touch-action:none;
+}
+.window__lights{ display:flex; gap:.5rem; flex:none }
+.light{
+  width:.75rem; height:.75rem; border-radius:50%;
+  appearance:none; border:0; padding:0; cursor:default;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);
+  transition:background .18s var(--e-fill);
+}
+.light--red{    background:#ff5f57 }
+.light--yellow{ background:#febc2e }
+.light--green{  background:#28c840 }
+.light:focus-visible{ outline:2px solid #fff; outline-offset:2px }
+
+/* неактивное окно гасит огни и возвращает цвет при наведении — как в macOS */
+.window:not(.is-active) .window__lights .light{ background:rgba(255,255,255,.26) }
+.hoverable .window:not(.is-active) .window__lights:hover .light--red{    background:#ff5f57 }
+.hoverable .window:not(.is-active) .window__lights:hover .light--yellow{ background:#febc2e }
+.hoverable .window:not(.is-active) .window__lights:hover .light--green{  background:#28c840 }
+.window:not(.is-active) .window__title{ opacity:.55 }
+
+/* свёрнутое окно не должно ловить клики и табуляцию */
+.window.is-min{ pointer-events:none }
+
+.window__title{
+  font-size:.8125rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.02em; opacity:.9;
+  position:absolute; left:50%; transform:translateX(-50%);
+  white-space:nowrap; max-width:60%; overflow:hidden; text-overflow:ellipsis;
+  pointer-events:none;
+}
+
+.window__body{ padding:1rem; display:grid; gap:1rem; align-content:start; overflow:auto; min-height:0 }
+.window__preview{
+  width:100%; aspect-ratio:16/10; border-radius:.5rem;
+  background:var(--g); background-size:cover; background-position:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09) inset;
+}
+.window__meta{ display:flex; flex-wrap:wrap; gap:.4rem 1.25rem; font-size:.8125rem; color:var(--ink-dim) }
+.window__meta b{ color:var(--ink); font-weight:600 }
+.window__note{ font-size:.875rem; line-height:1.55; color:var(--ink-dim); margin:0 }
+
+/* ============================================================
+   Док
+   ============================================================ */
+.dock{
+  position:fixed; z-index:800;
+  left:50%; bottom:.75rem; transform:translateX(-50%);
+  height:var(--dock-h);
+  display:flex; align-items:center; gap:.5rem;
+  padding:.55rem .75rem;
+  border-radius:1.2rem;
+  /* Простая серая полупрозрачная панель — как в macOS.
+     Без светового канта: он читается как «стекло 2015». */
+  background:rgba(148,150,160,.26);
+  backdrop-filter:blur(28px) saturate(130%);
+  -webkit-backdrop-filter:blur(28px) saturate(130%);
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:0 .5rem 1.75rem rgba(0,0,0,.26);
+  opacity:0;
+}
+.is-booted .dock{
+  opacity:1;
+  transform:translateX(-50%);
+  animation:dock-in .8s var(--e-spring) 1.5s backwards;
+}
+@keyframes dock-in{
+  from{ opacity:0; transform:translateX(-50%) translateY(1.5rem) scale(.9) }
+  to{   opacity:1; transform:translateX(-50%) }
+}
+
+.dock__item{
+  position:relative;
+  width:3rem; height:3rem; flex:none;
+  border:0; padding:0; border-radius:.85rem;
+  background:var(--g);
+  box-shadow:0 1px 2px rgba(0,0,0,.18);   /* плоско: без внутреннего канта */
+  display:grid; place-items:center;
+  color:#fff; cursor:default;
+  transition:transform .28s var(--e-spring);
+  text-decoration:none;
+}
+/* У настоящих маковских иконок своя форма, свои поля и своя тень —
+   подложка, скругление и тень контейнера тут только мешают */
+.dock__item--img{
+  width:3.25rem; height:3.25rem;
+  background:none; border-radius:0; box-shadow:none;
+}
+.dock__item--img img{
+  width:100%; height:100%; display:block; object-fit:contain;
+  filter:drop-shadow(0 .12rem .2rem rgba(0,0,0,.32));
+  pointer-events:none;
+}
+
+/* Док растёт от своего основания, а не подпрыгивает над ним */
+.dock__item{ transform-origin:bottom center }
+.hoverable .dock__item:hover{ transform:scale(1.14) }
+.dock__item:active{ transform:scale(.94) }
+.dock__item:focus-visible{ outline:2px solid #fff; outline-offset:3px }
+.dock__item svg{ width:1.35rem; height:1.35rem; display:block }
+
+/* всплывающая подпись дока */
+.dock__tip{
+  position:absolute; bottom:calc(100% + .6rem); left:50%; transform:translateX(-50%) translateY(.25rem);
+  padding:.25rem .5rem; border-radius:.35rem;
+  background:rgba(20,22,28,.92); color:var(--ink);
+  font-size:.75rem; font-weight:500; white-space:nowrap;
+  opacity:0; pointer-events:none;
+  transition:opacity .18s var(--e-out), transform .18s var(--e-out);
+  box-shadow:0 0 0 1px rgba(255,255,255,.12);
+}
+.hoverable .dock__item:hover .dock__tip{ opacity:1; transform:translateX(-50%) }
+
+.dock__sep{ width:1px; height:2rem; background:var(--hairline); flex:none; margin:0 .15rem }
+
+/* правая часть дока: свёрнутые окна */
+.dock__sep--min{ display:none }
+.dock.has-min .dock__sep--min{ display:block }
+.dock__min{ display:flex; align-items:center; gap:.5rem }
+.dock__item--min{ width:2.6rem; height:2.6rem; border-radius:.7rem }
+
+
+/* ============================================================
+   Телефон: десктоп превращается в спрингборд
+   ============================================================ */
+@media (max-width:640px){
+  .desktop{
+    display:flex; flex-wrap:wrap; align-content:flex-start;
+    justify-content:center;
+    gap:1.5rem 1rem; padding:1.5rem 1rem;
+    inset:var(--menubar-h) 0 calc(var(--dock-h) + 1rem) 0;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+  }
+  .icon{
+    position:static; transform:none; width:5.5rem;
+  }
+  .icon__thumb{ aspect-ratio:1/1 }
+  .is-booted .icon{ transform:none }
+  .icon{ opacity:0; transform:translateY(.5rem) }
+  .is-booted .icon{ opacity:1; transform:none }
+  .window{ width:94vw }
+
+  /* на 375 меню-бар не помещался: часы уезжали за край на 127px.
+     Убираем то, что дублирует док, и город — дата с временем остаются */
+  .menubar{ gap:.1rem; padding:0 .5rem }
+  .menubar__item--opt{ display:none }
+  .menubar__city{ display:none }
+  .menubar__right{ gap:.6rem }
+}
+/* «сент»/«нояб» шире «авг» — запаса на 414 не остаётся, дату убираем раньше */
+@media (max-width:480px){
+  .menubar__date{ display:none }
+}
+
+/* ============================================================
+   Доступность
+   ============================================================ */
+.skip{
+  position:absolute; left:.5rem; top:-3rem; z-index:1000;
+  padding:.5rem .75rem; border-radius:.35rem;
+  background:#fff; color:#000; font-size:.8125rem; font-weight:600;
+  text-decoration:none;
+  transition:top .2s var(--e-out);
+}
+.skip:focus{ top:.5rem }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important; animation-delay:0ms !important;
+    transition-duration:.01ms !important; transition-delay:0ms !important;
+  }
+  /* Контент обязан остаться видимым — но только тот, который и должен быть виден.
+     Свёрнутое окно, закрывающееся окно и погашенное меню держатся на opacity:0
+     осмысленно, и !important здесь вытащил бы их обратно на экран. */
+  .icon, .menubar, .dock{ opacity:1 !important }
+  .window:not(.is-min):not(.is-closing){ opacity:1 !important }
+  .menu.is-open{ opacity:1 !important; transform:none !important }
+  .menubar{ transform:none !important }
+  .wallpaper::before, .wallpaper::after{ opacity:1 !important }
+}
+/* Центрирование иконки по своей точке — только там, где она стоит абсолютно.
+   На телефоне иконки в потоке, и !important сдвинул бы их на половину размера. */
+@media (prefers-reduced-motion: reduce) and (min-width:641px){
+  .icon{ transform:translate(-50%,-50%) !important }
+}
+</style>
+</head>
+
+<body>
+<a class="skip" href="#desktop">К списку работ</a>
+
+<div class="wallpaper" aria-hidden="true">
+  <img class="wallpaper__photo" src="wallpaper.jpg" alt="" decoding="async" fetchpriority="high">
+  <div class="wallpaper__scrim"></div>
+  <div class="wallpaper__grain"></div>
+</div>
+
+<header class="menubar glass">
+  <button class="menubar__item menubar__mark" type="button"
+          data-menu="mark" aria-haspopup="true" aria-expanded="false" aria-label="Меню рабочего стола">◈</button>
+  <button class="menubar__item menubar__item--bold" type="button"
+          data-menu="app" aria-haspopup="true" aria-expanded="false">Портфолио</button>
+  <button class="menubar__item menubar__item--opt" type="button" data-open-about>Обо мне</button>
+  <button class="menubar__item menubar__item--opt" type="button" data-open-contact>Контакты</button>
+
+  <div class="menubar__right">
+    <svg class="menubar__glyph" width="15" height="12" viewBox="0 0 15 12" fill="none" aria-hidden="true">
+      <path d="M7.5 10.2 9 8.6a2.1 2.1 0 0 0-3 0l1.5 1.6Z" fill="currentColor"/>
+      <path d="M3.9 6.6a5.1 5.1 0 0 1 7.2 0M1.4 4a8.6 8.6 0 0 1 12.2 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <svg class="menubar__glyph" width="22" height="11" viewBox="0 0 22 11" fill="none" aria-hidden="true">
+      <rect x=".6" y=".6" width="17.5" height="9.8" rx="2.6" stroke="currentColor" stroke-width="1.1" opacity=".55"/>
+      <rect x="2.1" y="2.1" width="12" height="6.8" rx="1.5" fill="currentColor"/>
+      <path d="M19.8 3.8v3.4a1.8 1.8 0 0 0 0-3.4Z" fill="currentColor" opacity=".55"/>
+    </svg>
+    <span class="menubar__clock">
+      <span class="menubar__city">Москва</span><span class="menubar__date" id="clock-date"></span><span id="clock-time"></span>
+    </span>
+  </div>
+</header>
+
+<main class="desktop" id="desktop" aria-label="Работы"></main>
+
+<div class="marquee" id="marquee" aria-hidden="true"></div>
+
+<nav class="dock" aria-label="Панель">
+  <button class="dock__item dock__item--img" type="button" data-open-about>
+    <img src="icons/notes.png" alt="" width="256" height="256">
+    <span class="dock__tip">Обо мне</span>
+  </button>
+
+  <button class="dock__item dock__item--img" type="button" data-open-contact>
+    <img src="icons/mail.png" alt="" width="256" height="256">
+    <span class="dock__tip">Написать</span>
+  </button>
+
+  <a class="dock__item dock__item--img" href="#" data-social="instagram" aria-label="Instagram">
+    <img src="icons/instagram.png" alt="" width="256" height="256">
+    <span class="dock__tip">Instagram</span>
+  </a>
+
+  <a class="dock__item dock__item--img" href="#" data-social="telegram" aria-label="Telegram">
+    <img src="icons/telegram.png" alt="" width="256" height="256">
+    <span class="dock__tip">Telegram</span>
+  </a>
+
+  <span class="dock__sep dock__sep--min" aria-hidden="true"></span>
+  <span class="dock__min" id="dock-min"></span>
+
+  <span class="dock__sep" aria-hidden="true"></span>
+
+  <button class="dock__item dock__item--img" type="button" data-open-trash>
+    <img src="icons/trash.png" alt="" width="256" height="256">
+    <span class="dock__tip">Корзина</span>
+  </button>
+</nav>
+
+<script>
+/* ============================================================
+   Работы. Позже сюда подставятся реальные съёмки:
+   достаточно дописать поле img: 'фото/название.jpg'.
+   x/y — координаты центра иконки в процентах десктопа,
+   w — ширина в rem, ar — пропорции превью.
+   ============================================================ */
+const PROJECTS = [
+  { name:'Проект 01',          x:12, y:14, w:7.4, ar:'2/1',  g:'linear-gradient(140deg,#7d8ff5,#3a4bb8)' },
+  { name:'Плёнка',             x:27, y:11, w:5.2, ar:'1/1',  g:'linear-gradient(140deg,#e8a05c,#b5502f)' },
+  { name:'Серия «Архив»',      x:43, y:15, w:8.6, ar:'3/2',  g:'linear-gradient(140deg,#59c2b4,#1d6f74)' },
+  { name:'Портреты',           x:59, y:13, w:6.0, ar:'4/5',  g:'linear-gradient(140deg,#d8628f,#8a2a5e)' },
+  { name:'Ночная съёмка',      x:74, y:16, w:8.0, ar:'2/1',  g:'linear-gradient(140deg,#4a5db0,#1a1f4a)' },
+  { name:'Студия',             x:89, y:10, w:5.4, ar:'1/1',  g:'linear-gradient(140deg,#c8b071,#7a5c2a)' },
+
+  { name:'Проект 07',          x:7,  y:37, w:5.6, ar:'1/1',  g:'linear-gradient(140deg,#6fb3e0,#2a5f96)' },
+  { name:'Репортаж',           x:21, y:42, w:7.8, ar:'3/2',  g:'linear-gradient(140deg,#8f7ad4,#4b2f8c)' },
+  { name:'Чёрно-белое',        x:36, y:39, w:6.6, ar:'4/5',  g:'linear-gradient(140deg,#9aa0a6,#3a3f45)' },
+  { name:'Улица',              x:51, y:43, w:5.2, ar:'1/1',  g:'linear-gradient(140deg,#e07a5f,#8c3a24)' },
+  { name:'Интерьеры',          x:66, y:37, w:8.2, ar:'2/1',  g:'linear-gradient(140deg,#79b389,#2c6b4a)' },
+  { name:'Проект 12',          x:81, y:43, w:6.2, ar:'3/2',  g:'linear-gradient(140deg,#c96a9c,#6d2f63)' },
+  { name:'Пейзаж',             x:94, y:35, w:5.0, ar:'1/1',  g:'linear-gradient(140deg,#5fa8d3,#1f5a86)' },
+
+  { name:'Предметная съёмка',  x:14, y:64, w:8.8, ar:'2/1',  g:'linear-gradient(140deg,#d9a441,#96591d)' },
+  { name:'Бэкстейдж',          x:31, y:70, w:6.4, ar:'4/5',  g:'linear-gradient(140deg,#6c7ae0,#2f3577)' },
+  { name:'Проект 16',          x:47, y:63, w:5.4, ar:'1/1',  g:'linear-gradient(140deg,#57b6a5,#1f6459)' },
+  { name:'Полароид',           x:62, y:70, w:6.0, ar:'3/2',  g:'linear-gradient(140deg,#e3846c,#93392c)' },
+  { name:'Архив 2025',         x:78, y:64, w:7.2, ar:'2/1',  g:'linear-gradient(140deg,#8b8fa8,#40445c)' },
+];
+
+const desktop = document.getElementById('desktop');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- наведение только там, где есть мышь ---------- */
+if (matchMedia('(hover:hover) and (pointer:fine)').matches)
+  document.body.classList.add('hoverable');
+
+/* ---------- rem-сетка выше 1920 ---------- */
+function applyAdaptiveGrid(){
+  const FONT_BASE = 16, baseWidth = 1920, coef = 0.6666;
+  const reduction = ((baseWidth - innerWidth) / baseWidth) * 100;
+  const size = FONT_BASE - (FONT_BASE * (reduction * coef)) / 100;
+  if (size > FONT_BASE) document.documentElement.style.fontSize = size + 'px';
+  else document.documentElement.style.removeProperty('font-size');
+}
+applyAdaptiveGrid();
+
+/* ---------- масштаб поля иконок ----------
+   Позиции иконок в процентах, размеры — в rem, и на стыке это ломается дважды.
+   Первое: брейкпоинт rem-сетки на 1024 поднимает корневой кегль обратно к 16px
+   (он рассчитан на планшетную раскладку, которой здесь нет) — иконки в узком
+   окне раздуваются и налезают друг на друга. Второе: в низком окне ряды сходятся
+   по вертикали. Коэффициент возвращает полю иконок непрерывный ход по ширине
+   и поджимает его по высоте; на типографику и хром он не влияет.           */
+const REF_H = 700;
+function applyIconScale(){
+  if (matchMedia('(max-width:640px)').matches){
+    document.documentElement.style.setProperty('--k', '1');   // на телефоне раскладка своя
+    return;
+  }
+  const r = desktop.getBoundingClientRect();
+  const h = r.height || document.documentElement.clientHeight;
+  const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  if (!r.width || !h || !root) return;        // фоновая вкладка какое-то время отдаёт нули
+  const kw = Math.min(1, innerWidth * 0.0111111 / root);   // непрерывный ход вместо ступени
+  const kh = Math.min(1, h / REF_H);                       // низкое окно
+  document.documentElement.style.setProperty('--k', Math.max(.55, Math.min(kw, kh)).toFixed(3));
+}
+applyIconScale();
+
+let resizeT = 0;
+addEventListener('resize', () => {
+  document.body.classList.add('is-resizing');
+  applyAdaptiveGrid();
+  applyIconScale();
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => document.body.classList.remove('is-resizing'), 180);
+});
+/* окно может получить реальные размеры позже вкладки */
+new ResizeObserver(applyIconScale).observe(document.documentElement);
+
+/* ---------- часы ---------- */
+const fmtTime = new Intl.DateTimeFormat('ru-RU', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Moscow' });
+const fmtDate = new Intl.DateTimeFormat('ru-RU', { weekday:'short', day:'numeric', month:'short', timeZone:'Europe/Moscow' });
+const clockDate = document.getElementById('clock-date');
+const clockTime = document.getElementById('clock-time');
+function tick(){
+  const now = new Date();
+  clockDate.textContent = fmtDate.format(now).replace('.', '');
+  clockTime.textContent = fmtTime.format(now);
+}
+tick();
+setInterval(tick, 1000);
+
+/* ---------- сборка иконок ---------- */
+PROJECTS.forEach((p, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'icon';
+  b.dataset.i = i;
+  b.dataset.x = p.x;                    // исходное место — для «Упорядочить иконки»
+  b.dataset.y = p.y;
+  b.style.setProperty('--x', p.x + '%');
+  b.style.setProperty('--y', p.y + '%');
+  b.style.setProperty('--w', p.w + 'rem');
+  b.style.setProperty('--d', (500 + i * 60) + 'ms');
+
+  const thumb = document.createElement('span');
+  thumb.className = 'icon__thumb';
+  thumb.style.setProperty('--ar', p.ar);
+  thumb.style.setProperty('--g', p.img ? `url("${p.img}")` : p.g);
+  // запасной вариант: если файла нет — остаётся градиент, а не битая картинка
+  if (p.img){
+    const probe = new Image();
+    probe.onerror = () => thumb.style.setProperty('--g', p.g);
+    probe.src = p.img;
+  }
+
+  const label = document.createElement('span');
+  label.className = 'icon__label';
+  label.textContent = p.name;
+
+  b.append(thumb, label);
+  desktop.append(b);
+});
+
+const icons = [...desktop.querySelectorAll('.icon')];
+
+/* ---------- выделение ---------- */
+function clearSelection(){ icons.forEach(i => i.classList.remove('is-selected')) }
+
+desktop.addEventListener('pointerdown', e => {
+  if (e.target.closest('.icon')) return;
+  if (!e.shiftKey) clearSelection();
+  setActive(null);                      // клик по пустому месту снимает фокус с окон
+});
+
+/* ---------- перетаскивание иконок ---------- */
+const isPhone = () => matchMedia('(max-width:640px)').matches;
+const isTouch = !matchMedia('(hover:hover) and (pointer:fine)').matches;
+let drag = null, suppressClick = false;
+
+icons.forEach(icon => {
+  icon.addEventListener('pointerdown', e => {
+    suppressClick = false;
+    if (e.button !== 0 || isPhone()) return;
+    if (!e.shiftKey && !icon.classList.contains('is-selected')) clearSelection();
+    icon.classList.add('is-selected');
+
+    const rect = desktop.getBoundingClientRect();
+    drag = {
+      icon, moved:false,
+      startX:e.clientX, startY:e.clientY,
+      originX:parseFloat(icon.style.getPropertyValue('--x')),
+      originY:parseFloat(icon.style.getPropertyValue('--y')),
+      rect
+    };
+    icon.setPointerCapture(e.pointerId);
+  });
+
+  icon.addEventListener('pointermove', e => {
+    if (!drag || drag.icon !== icon) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;   // порог: отличаем клик от перетаскивания
+    if (!drag.moved){ drag.moved = true; icon.classList.add('is-dragging') }
+
+    const nx = drag.originX + (dx / drag.rect.width) * 100;
+    const ny = drag.originY + (dy / drag.rect.height) * 100;
+    icon.style.setProperty('--x', Math.min(97, Math.max(3, nx)) + '%');
+    icon.style.setProperty('--y', Math.min(94, Math.max(4, ny)) + '%');
+  });
+
+  const endDrag = () => {
+    if (!drag || drag.icon !== icon) return;
+    suppressClick = drag.moved;         // тап после перетаскивания не должен открывать
+    icon.classList.remove('is-dragging');
+    drag = null;
+  };
+  icon.addEventListener('pointerup', endDrag);
+  icon.addEventListener('pointercancel', endDrag);
+
+  /* мышь открывает двойным кликом, палец — одним касанием */
+  icon.addEventListener('click', () => {
+    if (isTouch && !suppressClick) openProject(+icon.dataset.i);
+  });
+  icon.addEventListener('dblclick', () => openProject(+icon.dataset.i));
+  icon.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openProject(+icon.dataset.i) }
+  });
+});
+
+/* ---------- рамка выделения по пустому месту ---------- */
+const marquee = document.getElementById('marquee');
+let mq = null;
+
+desktop.addEventListener('pointerdown', e => {
+  if (e.target.closest('.icon') || e.button !== 0 || isPhone()) return;
+  mq = { x:e.clientX, y:e.clientY };
+  marquee.style.display = 'block';
+  marquee.style.left = mq.x + 'px'; marquee.style.top = mq.y + 'px';
+  marquee.style.width = '0px';      marquee.style.height = '0px';
+  desktop.setPointerCapture(e.pointerId);
+});
+
+desktop.addEventListener('pointermove', e => {
+  if (!mq) return;
+  const x = Math.min(mq.x, e.clientX), y = Math.min(mq.y, e.clientY);
+  const w = Math.abs(e.clientX - mq.x), h = Math.abs(e.clientY - mq.y);
+  Object.assign(marquee.style, { left:x+'px', top:y+'px', width:w+'px', height:h+'px' });
+
+  const box = { l:x, t:y, r:x+w, b:y+h };
+  icons.forEach(icon => {
+    const r = icon.getBoundingClientRect();
+    const hit = r.right > box.l && r.left < box.r && r.bottom > box.t && r.top < box.b;
+    icon.classList.toggle('is-selected', hit);
+  });
+});
+
+const endMarquee = () => { if (mq){ mq = null; marquee.style.display = 'none' } };
+desktop.addEventListener('pointerup', endMarquee);
+desktop.addEventListener('pointercancel', endMarquee);
+
+/* ============================================================
+   Меню: одна реализация на меню-бар и правый клик
+   ============================================================ */
+let openMenu = null, menuJustClosed = null;
+
+function closeMenu(){
+  if (!openMenu) return;
+  const { el, owner } = openMenu;
+  openMenu = null;
+  if (owner) owner.setAttribute('aria-expanded', 'false');
+  el.classList.remove('is-open');
+  el.addEventListener('transitionend', () => el.remove(), { once:true });
+  setTimeout(() => el.remove(), 400);            // страховка, если transitionend не придёт
+}
+
+/* items: {label, run, off} либо '-' для разделителя */
+function showMenu(items, x, y, owner){
+  closeMenu();
+
+  const el = document.createElement('div');
+  el.className = 'menu';
+  el.setAttribute('role', 'menu');
+
+  items.forEach(it => {
+    if (it === '-'){
+      const sep = document.createElement('div');
+      sep.className = 'menu__sep';
+      el.append(sep);
+      return;
+    }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'menu__item';
+    b.setAttribute('role', 'menuitem');
+    b.textContent = it.label;
+    if (it.off) b.disabled = true;
+    b.addEventListener('click', () => { closeMenu(); it.run(); });
+    el.append(b);
+  });
+
+  /* Мерить надо дважды осторожно. Во-первых, в свободном углу: прижатая к краю
+     коробка ужимается доступным местом. Во-вторых, через offsetWidth, а не
+     getBoundingClientRect — до класса is-open на меню висит scale(.96), и рамка
+     возвращает размер вместе с трансформом, то есть на 4% меньше настоящего. */
+  el.style.left = '0px';
+  el.style.top  = '0px';
+  document.body.append(el);
+
+  const w = el.offsetWidth, h = el.offsetHeight;
+  el.style.left = Math.max(4, Math.min(x, innerWidth  - w - 6)) + 'px';
+  el.style.top  = Math.max(4, Math.min(y, innerHeight - h - 6)) + 'px';
+
+  requestAnimationFrame(() => el.classList.add('is-open'));
+  openMenu = { el, owner };
+  if (owner) owner.setAttribute('aria-expanded', 'true');
+  const first = el.querySelector('.menu__item:not([disabled])');
+  if (first) first.focus();
+  return el;
+}
+
+/* Клик мимо меню закрывает его. Владельца запоминаем только если нажали
+   по самому пункту меню-бара — иначе повторный клик по нему откроет меню
+   заново вместо того, чтобы закрыть. Если же закрыли кликом по столу,
+   следующий клик по пункту обязан открыть меню с первого раза. */
+document.addEventListener('pointerdown', e => {
+  if (!openMenu || (e.target instanceof Element && e.target.closest('.menu'))) return;
+  const owner = openMenu.owner;
+  menuJustClosed = (owner && e.target instanceof Element && owner.contains(e.target)) ? owner : null;
+  closeMenu();
+}, true);
+
+/* ---------- действия ---------- */
+const arrangeIcons = () => icons.forEach(i => {
+  i.style.setProperty('--x', i.dataset.x + '%');
+  i.style.setProperty('--y', i.dataset.y + '%');
+});
+const selectAll = () => icons.forEach(i => i.classList.add('is-selected'));
+
+const MENUS = {
+  mark: () => [
+    { label:'О рабочем столе…', run: openDesktopInfo },
+    '-',
+    { label:'Свернуть все окна', off: !liveWindows().length,
+      run: () => liveWindows().forEach(w => w.minimize()) },
+    { label:'Закрыть все окна',  off: !openWindows.length,
+      run: () => [...openWindows].forEach(w => w.close()) },
+  ],
+  app: () => [
+    { label:'Обо мне',  run: openAbout },
+    { label:'Контакты', run: openContact },
+    '-',
+    { label:'Упорядочить иконки', run: arrangeIcons },
+    { label:'Выделить всё',       run: selectAll },
+  ],
+};
+
+document.querySelectorAll('[data-menu]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (menuJustClosed === btn){ menuJustClosed = null; return }
+    menuJustClosed = null;
+    const r = btn.getBoundingClientRect();
+    showMenu(MENUS[btn.dataset.menu](), r.left, r.bottom + 4, btn);
+  });
+});
+
+desktop.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const icon = e.target.closest('.icon');
+  if (icon){
+    if (!icon.classList.contains('is-selected')){ clearSelection(); icon.classList.add('is-selected') }
+    showMenu([
+      { label:'Открыть', run: () => openProject(+icon.dataset.i) },
+      '-',
+      { label:'Упорядочить иконки', run: arrangeIcons },
+    ], e.clientX, e.clientY);
+  } else {
+    clearSelection();
+    showMenu([
+      { label:'Упорядочить иконки', run: arrangeIcons },
+      { label:'Выделить всё',       run: selectAll },
+      '-',
+      { label:'Обо мне',  run: openAbout },
+      { label:'Контакты', run: openContact },
+    ], e.clientX, e.clientY);
+  }
+});
+
+/* ============================================================
+   Окна
+   ============================================================ */
+let zTop = 100, openCount = 0;
+const openWindows = [];
+const dockEl  = document.querySelector('.dock');
+const dockMin = document.getElementById('dock-min');
+
+const liveWindows = () => openWindows.filter(w => !w.min);
+
+function setActive(win){
+  openWindows.forEach(w => w.el.classList.toggle('is-active', w.el === win));
+}
+
+/* плитка свёрнутого окна в правой части дока */
+function makeTile(st){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'dock__item dock__item--min';
+  b.style.setProperty('--g', st.tint || 'linear-gradient(150deg,#8a8f9c,#474c59)');
+  b.setAttribute('aria-label', 'Развернуть окно: ' + st.title);
+  const tip = document.createElement('span');
+  tip.className = 'dock__tip';
+  tip.textContent = st.title;
+  b.append(tip);
+  b.addEventListener('click', () => st.restore());
+  dockMin.append(b);
+  dockEl.classList.add('has-min');
+  st.tile = b;
+  return b;
+}
+function dropTile(st){
+  if (!st.tile) return;
+  st.tile.remove();
+  st.tile = null;
+  if (!dockMin.children.length) dockEl.classList.remove('has-min');
+}
+
+function makeWindow({ title, bodyHTML, tint }){
+  const win = document.createElement('section');
+  win.className = 'window glass';
+  win.setAttribute('role', 'dialog');
+  win.setAttribute('aria-label', title);
+  win.style.zIndex = ++zTop;
+
+  const offset = (openCount++ % 5) * 1.75;
+  win.style.left = `calc(50% - min(19rem, 46vw) + ${offset}rem)`;
+  win.style.top  = `calc(14vh + ${offset}rem)`;
+
+  win.innerHTML = `
+    <div class="window__bar">
+      <span class="window__lights">
+        <button class="light light--red"    type="button" aria-label="Закрыть"></button>
+        <button class="light light--yellow" type="button" aria-label="Свернуть"></button>
+        <button class="light light--green"  type="button" aria-label="Развернуть"></button>
+      </span>
+      <span class="window__title">${title}</span>
+    </div>
+    <div class="window__body">${bodyHTML}</div>`;
+
+  document.body.append(win);
+  requestAnimationFrame(() => win.classList.add('is-open'));
+
+  const st = { el:win, title, tint, min:false, zoom:false, closed:false, prev:null, tile:null };
+  openWindows.push(st);
+  setActive(win);
+
+  const focusWin = () => { win.style.zIndex = ++zTop; setActive(win) };
+  win.addEventListener('pointerdown', focusWin);
+
+  const activateNext = () => {
+    const rest = liveWindows();
+    setActive(rest.length ? rest[rest.length - 1].el : null);
+  };
+
+  /* ---------- красный ---------- */
+  st.close = () => {
+    if (st.closed) return;
+    st.closed = true;
+    dropTile(st);
+    const i = openWindows.indexOf(st);
+    if (i > -1) openWindows.splice(i, 1);
+    win.style.removeProperty('transition');
+    win.classList.add('is-closing');
+    win.addEventListener('transitionend', () => win.remove(), { once:true });
+    setTimeout(() => win.remove(), 400);          // страховка
+    activateNext();
+  };
+
+  /* ---------- жёлтый: втягивание в док ---------- */
+  st.minimize = () => {
+    if (st.min || st.closed) return;
+    const r = win.getBoundingClientRect();
+    const t = makeTile(st).getBoundingClientRect();
+    if (!r.width || !t.width){ dropTile(st); return }   // защита от нулевых размеров
+    st.min = true;
+    win.classList.add('is-min');
+    win.inert = true;
+    win.style.transformOrigin = 'center center';
+    win.style.transition = 'transform .34s cubic-bezier(.4,0,.7,1), opacity .3s linear .04s';
+    win.style.transform =
+      `translate(${t.left + t.width / 2 - r.left - r.width / 2}px, ` +
+      `${t.top + t.height / 2 - r.top - r.height / 2}px) scale(${Math.max(.05, t.width / r.width)})`;
+    win.style.opacity = '0';
+    activateNext();
+  };
+
+  st.restore = () => {
+    if (!st.min || st.closed) return;
+    st.min = false;
+    win.classList.remove('is-min');
+    win.inert = false;
+    dropTile(st);
+    win.style.transition = 'transform .38s var(--e-out), opacity .3s linear';
+    win.style.transform = '';
+    win.style.opacity = '';
+    setTimeout(() => { if (!st.min && !st.zoom) win.style.removeProperty('transition') }, 420);
+    focusWin();
+  };
+
+  /* ---------- зелёный: разворот в рабочую область ---------- */
+  st.toggleZoom = () => {
+    if (st.min || st.closed) return;
+    const pad = 12;
+    const top    = document.querySelector('.menubar').getBoundingClientRect().bottom + pad;
+    const bottom = dockEl.getBoundingClientRect().top - pad;
+    if (bottom - top < 140) return;                     // разворачивать некуда
+    const put = g => Object.assign(win.style,
+      { left:g.left + 'px', top:g.top + 'px', width:g.width + 'px', height:g.height + 'px' });
+    const r = win.getBoundingClientRect();
+
+    win.style.transition = 'left .32s var(--e-out), top .32s var(--e-out), ' +
+                           'width .32s var(--e-out), height .32s var(--e-out)';
+    if (!st.zoom){
+      st.prev = { left:r.left, top:r.top, width:r.width, height:r.height };
+      put(r);                                           // зафиксировать текущее в пикселях
+      requestAnimationFrame(() =>
+        put({ left:pad, top, width:innerWidth - pad * 2, height:bottom - top }));
+      st.zoom = true;
+    } else {
+      put(st.prev);
+      st.zoom = false;
+      setTimeout(() => {
+        if (st.zoom) return;
+        win.style.width = ''; win.style.height = '';
+        win.style.removeProperty('transition');
+      }, 360);
+    }
+  };
+
+  win.querySelector('.light--red')   .addEventListener('click', st.close);
+  win.querySelector('.light--yellow').addEventListener('click', st.minimize);
+  win.querySelector('.light--green') .addEventListener('click', st.toggleZoom);
+
+  /* ---------- перетаскивание за заголовок ---------- */
+  const bar = win.querySelector('.window__bar');
+  let wd = null;
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.closest('.light') || e.button !== 0) return;
+    const r = win.getBoundingClientRect();
+    wd = { dx:e.clientX - r.left, dy:e.clientY - r.top };
+    win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+    win.style.transition = 'none';
+    bar.setPointerCapture(e.pointerId);
+  });
+  bar.addEventListener('pointermove', e => {
+    if (!wd) return;
+    st.zoom = false;                                    // потащили — разворот больше не активен
+    win.style.left = Math.max(0, Math.min(innerWidth  - 80, e.clientX - wd.dx)) + 'px';
+    win.style.top  = Math.max(0, Math.min(innerHeight - 40, e.clientY - wd.dy)) + 'px';
+  });
+  const endWin = () => { if (wd){ wd = null; win.style.removeProperty('transition') } };
+  bar.addEventListener('pointerup', endWin);
+  bar.addEventListener('pointercancel', endWin);
+  bar.addEventListener('dblclick', e => { if (!e.target.closest('.light')) st.toggleZoom() });
+
+  return st;
+}
+
+function openProject(i){
+  const p = PROJECTS[i];
+  const bg = p.img ? `url("${p.img}")` : p.g;
+  makeWindow({
+    title: p.name,
+    tint: p.g,
+    bodyHTML: `
+      <div class="window__preview" style="--g:${bg}"></div>
+      <div class="window__meta">
+        <span><b>Год</b> —</span>
+        <span><b>Съёмка</b> —</span>
+        <span><b>Кадров</b> —</span>
+      </div>
+      <p class="window__note">Место под описание работы. Когда пришлёшь материалы, сюда встанут фотографии и текст.</p>`
+  });
+}
+
+function openAbout(){
+  makeWindow({
+    title: 'Обо мне',
+    tint: 'linear-gradient(150deg,#5b7cfa,#3b4fd8)',
+    bodyHTML: `<p class="window__note">Место под текст о себе: чем занимаешься, чем снимаешь, с кем работал.</p>`
+  });
+}
+
+function openContact(){
+  makeWindow({
+    title: 'Контакты',
+    tint: 'linear-gradient(150deg,#f0913a,#e0632a)',
+    bodyHTML: `<p class="window__note">Место под контакты: почта, телефон, соцсети. Подставим, когда определимся с названием.</p>`
+  });
+}
+
+function openDesktopInfo(){
+  makeWindow({
+    title: 'О рабочем столе',
+    tint: 'linear-gradient(150deg,#79839c,#3c4356)',
+    bodyHTML: `<p class="window__note">
+      Витрина работ, собранная как рабочий стол.<br>
+      Иконки перетаскиваются, по пустому месту тянется рамка выделения, правый клик открывает меню.<br>
+      Окна двигаются за заголовок. Красный огонь закрывает, жёлтый сворачивает в док, зелёный разворачивает —
+      как и двойной клик по заголовку.</p>`
+  });
+}
+
+function openTrash(){
+  makeWindow({
+    title: 'Корзина',
+    tint: 'linear-gradient(150deg,#c9ccd4,#82868f)',
+    bodyHTML: `<p class="window__note">Место под то, что не вошло в портфолио.</p>`
+  });
+}
+
+document.querySelectorAll('[data-open-trash]').forEach(b => b.addEventListener('click', openTrash));
+document.querySelectorAll('[data-open-about]').forEach(b => b.addEventListener('click', openAbout));
+document.querySelectorAll('[data-open-contact]').forEach(b => b.addEventListener('click', openContact));
+
+/* если картинка не пришла — вернуть градиентную подложку, а не пустой квадрат */
+document.querySelectorAll('.dock__item--img img').forEach(img => {
+  img.addEventListener('error', () => {
+    const item = img.closest('.dock__item');
+    item.classList.remove('dock__item--img');
+    item.style.setProperty('--g', 'linear-gradient(150deg,#8a8f9c,#474c59)');
+    img.remove();
+  }, { once:true });
+});
+
+/* ссылки в доке пока заглушки — подставим настоящие вместе с контактами */
+document.querySelectorAll('[data-social]').forEach(a => {
+  a.addEventListener('click', e => { e.preventDefault(); openContact(); });
+});
+
+/* ---------- клавиатура ---------- */
+addEventListener('keydown', e => {
+  if ((e.key === 'a' || e.key === 'ф') && (e.metaKey || e.ctrlKey)){
+    e.preventDefault(); selectAll(); return;
+  }
+  if (e.key !== 'Escape') return;
+  if (openMenu){ closeMenu(); return }
+  const live = liveWindows();
+  if (live.length){
+    live.sort((a, b) => +a.el.style.zIndex - +b.el.style.zIndex).pop().close();
+  } else clearSelection();
+});
+
+/* ============================================================
+   Гейт загрузки: анимации стартуют, когда готовы шрифты.
+   start идемпотентен, есть страховочный таймаут.
+   ============================================================ */
+let booted = false;
+function start(){
+  if (booted) return;
+  booted = true;
+  document.body.classList.add('is-booted');
+}
+const wallpaper = document.querySelector('.wallpaper__photo');
+wallpaper.addEventListener('error', () => document.body.classList.add('no-photo'), { once:true });
+
+if (reduced) start();
+else {
+  const фотоГотово = wallpaper.complete ? null : new Promise(готово => {
+    wallpaper.addEventListener('load',  готово, { once:true });
+    wallpaper.addEventListener('error', готово, { once:true });
+  });
+  Promise.all([document.fonts.ready, фотоГотово].filter(Boolean)).then(start);
+  setTimeout(start, 5000);   // сеть не должна держать страницу вечно
+}
+</script>
+</body>
+</html>
