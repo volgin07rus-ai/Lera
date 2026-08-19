@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Рабочий стол — портфолио</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Внешних шрифтов нет намеренно: интерфейс собран на системных, как у macOS и iOS.
+     Запрос к Google Fonts здесь был мёртвым (Inter в стеке четвёртый и до него не доходит),
+     зато на медленной сети держал гейт загрузки до страховочных пяти секунд. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d12'/%3E%3Ctext x='16' y='22' font-size='17' text-anchor='middle' fill='%23fff'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
 
 <style>
 /* ============================================================
@@ -22,8 +23,14 @@
   --ink-dim:       rgba(255,254,252,.62);
   --accent:        #2f7cf6;          /* выделение иконки */
 
-  --menubar-h:     1.75rem;
-  --dock-h:        4.5rem;
+  /* Меню-бар и док — не контент, а системный хром. На настоящем маке они
+     одного физического размера при любом разрешении, поэтому и здесь заданы
+     в пикселях. В rem их держать нельзя: rem-сетка привязана к ширине окна и
+     на маковских 1512 и 1728 даёт корневой кегль 12.6 и 14.4px — док ужимался
+     до 37–42px против настоящих 60. */
+  --menubar-h:     24px;
+  --dock-icon:     clamp(40px, min(6.4vh, 12vw), 60px);
+  --dock-h:        calc(var(--dock-icon) + 14px);
   --k:             1;                /* масштаб поля иконок, считается по фактическому размеру стола */
 
   --e-out:    cubic-bezier(.16,1,.3,1);      /* основная на появление */
@@ -44,7 +51,7 @@ html{ font-size:16px }
 html,body{ height:100%; margin:0 }
 
 body{
-  font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
   background:var(--bg);
   color:var(--ink);
   overflow:hidden;               /* десктоп не прокручивается */
@@ -130,9 +137,9 @@ body{
    ============================================================ */
 .menubar{
   position:fixed; inset:0 0 auto 0; height:var(--menubar-h); z-index:900;
-  display:flex; align-items:center; gap:.25rem;
-  padding:0 .75rem;
-  font-size:.8125rem; line-height:1;
+  display:flex; align-items:center; gap:2px;
+  padding:0 12px;
+  font-size:13px; line-height:1;
   border-radius:0;
   opacity:0; transform:translateY(-100%);
   transition:opacity .7s var(--e-out), transform .7s var(--e-out);
@@ -140,30 +147,30 @@ body{
 .is-booted .menubar{ opacity:1; transform:none }
 
 .menubar__mark{
-  font-size:.9375rem; line-height:1; padding:0 .5rem;
+  font-size:15px; line-height:1; padding:0 8px;
   color:var(--ink); opacity:.95;
 }
 .menubar__item{
   appearance:none; border:0; background:transparent; color:var(--ink);
   font:inherit; font-weight:500;
-  padding:.28rem .5rem; border-radius:.3rem; cursor:default;
+  padding:4px 8px; border-radius:5px; cursor:default;
   transition:background .16s var(--e-fill);
 }
 .menubar__item--bold{ font-weight:700 }
 .hoverable .menubar__item:hover{ background:rgba(255,255,255,.16) }
 
-.menubar__right{ margin-left:auto; display:flex; align-items:center; gap:.85rem }
+.menubar__right{ margin-left:auto; display:flex; align-items:center; gap:14px }
 .menubar__glyph{ display:block; opacity:.9 }
 .menubar__clock{ font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap }
-.menubar__city{ opacity:.62; margin-right:.35rem }
-.menubar__date{ margin-right:.35rem }
+.menubar__city{ opacity:.62; margin-right:5px }
+.menubar__date{ margin-right:5px }
 
 /* ============================================================
    Десктоп и иконки
    ============================================================ */
 .desktop{
   position:fixed; z-index:10;
-  inset:var(--menubar-h) 0 calc(var(--dock-h) + 1.5rem) 0;
+  inset:var(--menubar-h) 0 calc(var(--dock-h) + 22px) 0;
 }
 
 .icon{
@@ -327,23 +334,43 @@ body{
 .window__meta b{ color:var(--ink); font-weight:600 }
 .window__note{ font-size:.875rem; line-height:1.55; color:var(--ink-dim); margin:0 }
 
+/* список контактов */
+.linklist{ list-style:none; margin:0; padding:0; display:grid; gap:1px;
+  border-radius:.5rem; overflow:hidden; background:var(--hairline) }
+.linklist__row{
+  display:flex; align-items:baseline; gap:1rem;
+  padding:.7rem .9rem; background:rgba(255,255,255,.05);
+}
+.linklist__key{ flex:none; width:5.5rem; font-size:.8125rem; color:var(--ink-dim) }
+.linklist__val{
+  color:var(--ink); text-decoration:none; font-size:.9375rem; font-weight:500;
+  overflow-wrap:anywhere;
+}
+.hoverable .linklist__val:hover{ text-decoration:underline; text-underline-offset:.2em }
+.linklist__val:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:.2rem }
+@media (max-width:640px){
+  .linklist__row{ padding:12px 14px }
+  .linklist__key{ width:84px; font-size:13px }
+  .linklist__val{ font-size:16px }
+}
+
 /* ============================================================
    Док
    ============================================================ */
 .dock{
   position:fixed; z-index:800;
-  left:50%; bottom:.75rem; transform:translateX(-50%);
+  left:50%; bottom:10px; transform:translateX(-50%);
   height:var(--dock-h);
-  display:flex; align-items:center; gap:.5rem;
-  padding:.55rem .75rem;
-  border-radius:1.2rem;
+  display:flex; align-items:center; gap:8px;
+  padding:7px 11px;
+  border-radius:19px;
   /* Простая серая полупрозрачная панель — как в macOS.
      Без светового канта: он читается как «стекло 2015». */
   background:rgba(148,150,160,.26);
   backdrop-filter:blur(28px) saturate(130%);
   -webkit-backdrop-filter:blur(28px) saturate(130%);
   border:1px solid rgba(255,255,255,.15);
-  box-shadow:0 .5rem 1.75rem rgba(0,0,0,.26);
+  box-shadow:0 8px 28px rgba(0,0,0,.26);
   opacity:0;
 }
 .is-booted .dock{
@@ -352,14 +379,14 @@ body{
   animation:dock-in .8s var(--e-spring) 1.5s backwards;
 }
 @keyframes dock-in{
-  from{ opacity:0; transform:translateX(-50%) translateY(1.5rem) scale(.9) }
+  from{ opacity:0; transform:translateX(-50%) translateY(24px) scale(.9) }
   to{   opacity:1; transform:translateX(-50%) }
 }
 
 .dock__item{
   position:relative;
-  width:3rem; height:3rem; flex:none;
-  border:0; padding:0; border-radius:.85rem;
+  width:var(--dock-icon); height:var(--dock-icon); flex:none;
+  border:0; padding:0; border-radius:14px;
   background:var(--g);
   box-shadow:0 1px 2px rgba(0,0,0,.18);   /* плоско: без внутреннего канта */
   display:grid; place-items:center;
@@ -370,12 +397,11 @@ body{
 /* У настоящих маковских иконок своя форма, свои поля и своя тень —
    подложка, скругление и тень контейнера тут только мешают */
 .dock__item--img{
-  width:3.25rem; height:3.25rem;
   background:none; border-radius:0; box-shadow:none;
 }
 .dock__item--img img{
   width:100%; height:100%; display:block; object-fit:contain;
-  filter:drop-shadow(0 .12rem .2rem rgba(0,0,0,.32));
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.32));
   pointer-events:none;
 }
 
@@ -384,59 +410,201 @@ body{
 .hoverable .dock__item:hover{ transform:scale(1.14) }
 .dock__item:active{ transform:scale(.94) }
 .dock__item:focus-visible{ outline:2px solid #fff; outline-offset:3px }
-.dock__item svg{ width:1.35rem; height:1.35rem; display:block }
+.dock__item svg{ width:45%; height:45%; display:block }
 
 /* всплывающая подпись дока */
 .dock__tip{
-  position:absolute; bottom:calc(100% + .6rem); left:50%; transform:translateX(-50%) translateY(.25rem);
-  padding:.25rem .5rem; border-radius:.35rem;
+  position:absolute; bottom:calc(100% + 9px); left:50%; transform:translateX(-50%) translateY(4px);
+  padding:4px 8px; border-radius:6px;
   background:rgba(20,22,28,.92); color:var(--ink);
-  font-size:.75rem; font-weight:500; white-space:nowrap;
+  font-size:12px; font-weight:500; white-space:nowrap;
   opacity:0; pointer-events:none;
   transition:opacity .18s var(--e-out), transform .18s var(--e-out);
   box-shadow:0 0 0 1px rgba(255,255,255,.12);
 }
 .hoverable .dock__item:hover .dock__tip{ opacity:1; transform:translateX(-50%) }
 
-.dock__sep{ width:1px; height:2rem; background:var(--hairline); flex:none; margin:0 .15rem }
+.dock__sep{ width:1px; height:calc(var(--dock-icon) * .6); background:var(--hairline); flex:none; margin:0 2px }
 
 /* правая часть дока: свёрнутые окна */
 .dock__sep--min{ display:none }
 .dock.has-min .dock__sep--min{ display:block }
-.dock__min{ display:flex; align-items:center; gap:.5rem }
-.dock__item--min{ width:2.6rem; height:2.6rem; border-radius:.7rem }
+.dock__min{ display:flex; align-items:center; gap:8px }
+.dock__item--min{
+  width:calc(var(--dock-icon) * .78); height:calc(var(--dock-icon) * .78);
+  border-radius:11px;
+}
 
 
 /* ============================================================
-   Телефон: десктоп превращается в спрингборд
+   Телефон: спрингборд в духе iOS
+   Отдельная раскладка, а не сжатый десктоп: страницы листаются вбок со снапом,
+   значки квадратные со скруглением суперэллипса, док на четыре приложения.
+   Размеры — в пикселях от ширины экрана, как на самом телефоне.
    ============================================================ */
-@media (max-width:640px){
-  .desktop{
-    display:flex; flex-wrap:wrap; align-content:flex-start;
-    justify-content:center;
-    gap:1.5rem 1rem; padding:1.5rem 1rem;
-    inset:var(--menubar-h) 0 calc(var(--dock-h) + 1rem) 0;
-    overflow-y:auto; -webkit-overflow-scrolling:touch;
-  }
-  .icon{
-    position:static; transform:none; width:5.5rem;
-  }
-  .icon__thumb{ aspect-ratio:1/1 }
-  .is-booted .icon{ transform:none }
-  .icon{ opacity:0; transform:translateY(.5rem) }
-  .is-booted .icon{ opacity:1; transform:none }
-  .window{ width:94vw }
+.phone{ display:none }
 
-  /* на 375 меню-бар не помещался: часы уезжали за край на 127px.
-     Убираем то, что дублирует док, и город — дата с временем остаются */
-  .menubar{ gap:.1rem; padding:0 .5rem }
-  .menubar__item--opt{ display:none }
-  .menubar__city{ display:none }
-  .menubar__right{ gap:.6rem }
-}
-/* «сент»/«нояб» шире «авг» — запаса на 414 не остаётся, дату убираем раньше */
-@media (max-width:480px){
-  .menubar__date{ display:none }
+@media (max-width:640px){
+  /* десктопная механика на телефоне не нужна целиком */
+  .desktop, .dock, .menubar, .marquee{ display:none !important }
+
+  .phone{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column;
+    padding:calc(env(safe-area-inset-top, 0px)) 0 calc(env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ---------- строка состояния ---------- */
+  .ios-status{
+    flex:none; height:44px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 26px;
+    font-size:15px; font-weight:600; letter-spacing:.01em;
+    color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.5);
+  }
+  .ios-status__time{ font-variant-numeric:tabular-nums }
+  .ios-status__right{ display:flex; align-items:center; gap:6px }
+  .ios-status__right svg{ display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)) }
+
+  /* ---------- страницы ---------- */
+  .ios-pages{
+    flex:1 1 auto; min-height:0;
+    display:flex;
+    overflow-x:auto; overflow-y:hidden;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none; -ms-overflow-style:none;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .ios-pages::-webkit-scrollbar{ display:none }
+
+  .ios-page{
+    flex:0 0 100%; width:100%; height:100%;
+    scroll-snap-align:center; scroll-snap-stop:always;
+    display:grid; grid-template-columns:repeat(4, 1fr);
+    align-content:start; justify-items:center;
+    padding:14px 16px 0;
+    box-sizing:border-box;
+  }
+
+  /* ---------- значок ---------- */
+  .ios-icon{
+    appearance:none; border:0; background:transparent; padding:0;
+    width:var(--ios-icon); font:inherit; color:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:default; text-decoration:none; -webkit-tap-highlight-color:transparent;
+  }
+  .ios-icon__art{
+    width:var(--ios-icon); height:var(--ios-icon);
+    border-radius:22.4%;               /* скругление суперэллипса iOS */
+    background:var(--g); background-size:cover; background-position:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.3);
+    overflow:hidden;
+  }
+  .ios-icon__art img{ width:100%; height:100%; display:block; object-fit:cover }
+  /* у готовых маковских картинок форма своя — подложку и обрезку снимаем */
+  .ios-icon__art--img{ border-radius:0; background:none; box-shadow:none; overflow:visible }
+  .ios-icon__art--img img{ object-fit:contain; filter:drop-shadow(0 1px 3px rgba(0,0,0,.3)) }
+
+  .ios-icon__label{
+    font-size:12px; line-height:1.25; font-weight:400;
+    text-align:center; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.5);
+  }
+  .ios-icon:active .ios-icon__art{ transform:scale(.9); transition:transform .12s ease-out }
+  .ios-icon__art{ transition:transform .28s var(--e-out) }
+
+  /* появление значков волной по странице */
+  .ios-icon{ opacity:0; transform:translateY(6px) scale(.94) }
+  .is-booted .ios-icon{
+    opacity:1; transform:none;
+    transition:opacity .5s var(--e-out) var(--d), transform .5s var(--e-out) var(--d);
+  }
+
+  /* ---------- точки страниц ---------- */
+  .ios-dots{
+    flex:none; height:26px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .ios-dots__d{
+    width:7px; height:7px; border-radius:50%;
+    background:rgba(255,255,255,.42);
+    transition:background .25s var(--e-out);
+  }
+  .ios-dots__d.is-on{ background:#fff }
+
+  /* ---------- док ---------- */
+  .ios-dock{
+    flex:none; margin:0 10px 8px;
+    display:flex; justify-content:space-evenly; align-items:center;
+    padding:10px 8px; border-radius:34px;
+    background:rgba(255,255,255,.16);
+    backdrop-filter:blur(28px) saturate(150%);
+    -webkit-backdrop-filter:blur(28px) saturate(150%);
+  }
+  .ios-dock .ios-icon{ gap:0 }
+  .ios-dock .ios-icon__label{ display:none }
+
+  .ios-dock{ opacity:0; transform:translateY(14px) }
+  .is-booted .ios-dock{
+    opacity:1; transform:none;
+    transition:opacity .6s var(--e-out) .5s, transform .6s var(--e-spring) .5s;
+  }
+
+  /* ---------- открытое «приложение» ---------- */
+  .appview{
+    position:fixed; inset:0; z-index:1000;
+    display:flex; flex-direction:column;
+    background:#0b0d12; color:var(--ink);
+    border-radius:22%; overflow:hidden;
+    opacity:0; transform:scale(var(--s, .2));
+    transform-origin:var(--ox, 50%) var(--oy, 50%);
+    transition:opacity .2s linear,
+               transform .44s cubic-bezier(.32,.72,0,1),
+               border-radius .44s cubic-bezier(.32,.72,0,1);
+    will-change:transform;
+  }
+  .appview.is-open{ opacity:1; transform:none; border-radius:0 }
+  .appview.is-dragging{ transition:none }
+
+  .appview__bar{
+    flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:calc(env(safe-area-inset-top, 0px) + 12px) 18px 12px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .appview__title{
+    font-size:17px; font-weight:600; letter-spacing:-.01em;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .appview__close{
+    appearance:none; border:0; flex:none;
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(255,255,255,.14); color:var(--ink);
+    display:grid; place-items:center; cursor:default;
+  }
+  .appview__close svg{ width:13px; height:13px; display:block }
+
+  .appview__body{
+    flex:1 1 auto; min-height:0; overflow-y:auto;
+    padding:18px 18px calc(env(safe-area-inset-bottom, 0px) + 28px);
+    display:grid; gap:16px; align-content:start;
+  }
+  .appview__preview{
+    width:100%; aspect-ratio:16/10; border-radius:14px;
+    background:var(--g); background-size:cover; background-position:center;
+  }
+  .appview__meta{ display:flex; flex-wrap:wrap; gap:6px 22px; font-size:14px; color:var(--ink-dim) }
+  .appview__meta b{ color:var(--ink); font-weight:600 }
+  .appview__note{ font-size:15px; line-height:1.55; color:var(--ink-dim); margin:0 }
+
+  /* полоска-подсказка «потяните вниз» */
+  .appview__grip{
+    position:absolute; left:50%; transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 7px);
+    width:130px; height:5px; border-radius:3px;
+    background:rgba(255,255,255,.32); pointer-events:none;
+  }
 }
 
 /* ============================================================
@@ -508,6 +676,34 @@ body{
 
 <main class="desktop" id="desktop" aria-label="Работы"></main>
 
+<div class="phone" id="phone">
+  <div class="ios-status">
+    <span class="ios-status__time" id="ios-time"></span>
+    <span class="ios-status__right" aria-hidden="true">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor">
+        <rect x="0"  y="8"   width="3" height="4"   rx="1"/>
+        <rect x="5"  y="5.5" width="3" height="6.5" rx="1"/>
+        <rect x="10" y="3"   width="3" height="9"   rx="1"/>
+        <rect x="15" y="0"   width="3" height="12"  rx="1"/>
+      </svg>
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+        <path d="M8.5 10.4 10.2 8.6a2.4 2.4 0 0 0-3.4 0l1.7 1.8Z" fill="currentColor"/>
+        <path d="M4.4 6.4a5.8 5.8 0 0 1 8.2 0M1.6 3.5a9.8 9.8 0 0 1 13.8 0"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <svg width="26" height="13" viewBox="0 0 26 13" fill="none">
+        <rect x=".6" y=".6" width="21" height="11.8" rx="3.4" stroke="currentColor" stroke-width="1.1" opacity=".5"/>
+        <rect x="2.2" y="2.2" width="15" height="8.6" rx="2.1" fill="currentColor"/>
+        <path d="M23.4 4.4v4.2a2.2 2.2 0 0 0 0-4.2Z" fill="currentColor" opacity=".5"/>
+      </svg>
+    </span>
+  </div>
+
+  <div class="ios-pages" id="ios-pages"></div>
+  <div class="ios-dots" id="ios-dots" aria-hidden="true"></div>
+  <nav class="ios-dock" id="ios-dock" aria-label="Док"></nav>
+</div>
+
 <div class="marquee" id="marquee" aria-hidden="true"></div>
 
 <nav class="dock" aria-label="Панель">
@@ -518,15 +714,17 @@ body{
 
   <button class="dock__item dock__item--img" type="button" data-open-contact>
     <img src="icons/mail.png" alt="" width="256" height="256">
-    <span class="dock__tip">Написать</span>
+    <span class="dock__tip">Контакты</span>
   </button>
 
-  <a class="dock__item dock__item--img" href="#" data-social="instagram" aria-label="Instagram">
+  <a class="dock__item dock__item--img" href="https://www.instagram.com/fu_ck_the_population/"
+     target="_blank" rel="noopener noreferrer" aria-label="Instagram">
     <img src="icons/instagram.png" alt="" width="256" height="256">
     <span class="dock__tip">Instagram</span>
   </a>
 
-  <a class="dock__item dock__item--img" href="#" data-social="telegram" aria-label="Telegram">
+  <a class="dock__item dock__item--img" href="https://t.me/leratreshenkova"
+     target="_blank" rel="noopener noreferrer" aria-label="Telegram">
     <img src="icons/telegram.png" alt="" width="256" height="256">
     <span class="dock__tip">Telegram</span>
   </a>
@@ -930,6 +1128,11 @@ function dropTile(st){
 }
 
 function makeWindow({ title, bodyHTML, tint }){
+  /* На телефоне то же содержимое разворачивается во весь экран, как приложение —
+     плавающие окна там неуместны, а разметка карточки нужна ровно та же. */
+  if (matchMedia('(max-width:640px)').matches)
+    return открытьПриложение({ название: title, bodyHTML });
+
   const win = document.createElement('section');
   win.className = 'window glass';
   win.setAttribute('role', 'dialog');
@@ -1095,11 +1298,23 @@ function openAbout(){
   });
 }
 
+const КОНТАКТЫ = [
+  { ключ:'Почта',     текст:'ha.te5@yandex.ru',      адрес:'mailto:ha.te5@yandex.ru', внешняя:false },
+  { ключ:'Telegram',  текст:'@leratreshenkova',      адрес:'https://t.me/leratreshenkova' },
+  { ключ:'Instagram', текст:'@fu_ck_the_population', адрес:'https://www.instagram.com/fu_ck_the_population/' },
+];
+
+const списокКонтактов = () => `<ul class="linklist">` + КОНТАКТЫ.map(к => `
+  <li class="linklist__row">
+    <span class="linklist__key">${к.ключ}</span>
+    <a class="linklist__val" href="${к.адрес}"${к.внешняя === false ? '' : ' target="_blank" rel="noopener noreferrer"'}>${к.текст}</a>
+  </li>`).join('') + `</ul>`;
+
 function openContact(){
   makeWindow({
     title: 'Контакты',
     tint: 'linear-gradient(150deg,#f0913a,#e0632a)',
-    bodyHTML: `<p class="window__note">Место под контакты: почта, телефон, соцсети. Подставим, когда определимся с названием.</p>`
+    bodyHTML: `<p class="window__note">Пишите, куда удобнее.</p>` + списокКонтактов()
   });
 }
 
@@ -1137,10 +1352,7 @@ document.querySelectorAll('.dock__item--img img').forEach(img => {
   }, { once:true });
 });
 
-/* ссылки в доке пока заглушки — подставим настоящие вместе с контактами */
-document.querySelectorAll('[data-social]').forEach(a => {
-  a.addEventListener('click', e => { e.preventDefault(); openContact(); });
-});
+
 
 /* ---------- клавиатура ---------- */
 addEventListener('keydown', e => {
@@ -1154,6 +1366,210 @@ addEventListener('keydown', e => {
     live.sort((a, b) => +a.el.style.zIndex - +b.el.style.zIndex).pop().close();
   } else clearSelection();
 });
+
+
+/* ============================================================
+   Телефон: спрингборд
+   Отдельная сборка, а не переиспользование десктопных иконок: там абсолютные
+   координаты, перетаскивание и рамка выделения — на телефоне всё это лишнее.
+   Содержимое карточек берётся то же самое: makeWindow на узком экране
+   разворачивает «приложение» вместо плавающего окна, поэтому openProject,
+   openAbout, openContact и openTrash работают без изменений.
+   ============================================================ */
+const страницыEl = document.getElementById('ios-pages');
+const точкиEl    = document.getElementById('ios-dots');
+const докTel     = document.getElementById('ios-dock');
+const телВремя   = document.getElementById('ios-time');
+
+const ДОК_ТЕЛЕФОНА = [
+  { подпись:'Заметки',   картинка:'icons/notes.png',     открыть:openAbout },
+  { подпись:'Почта',     картинка:'icons/mail.png',      открыть:openContact },
+  { подпись:'Instagram', картинка:'icons/instagram.png', ссылка:'https://www.instagram.com/fu_ck_the_population/' },
+  { подпись:'Telegram',  картинка:'icons/telegram.png',  ссылка:'https://t.me/leratreshenkova' },
+];
+
+let последнийЗначок = null;      /* из него разворачивается приложение */
+
+function значок({ подпись, фон, картинка, открыть, ссылка }, задержка){
+  /* соцсети — настоящие ссылки, остальное — кнопки, открывающие «приложение» */
+  const b = document.createElement(ссылка ? 'a' : 'button');
+  if (ссылка){ b.href = ссылка; b.target = '_blank'; b.rel = 'noopener noreferrer' }
+  else b.type = 'button';
+  b.className = 'ios-icon';
+  b.style.setProperty('--d', задержка + 'ms');
+
+  const art = document.createElement('span');
+  art.className = 'ios-icon__art' + (картинка ? ' ios-icon__art--img' : '');
+  if (картинка){
+    const img = document.createElement('img');
+    img.src = картинка; img.alt = '';
+    art.append(img);
+  } else {
+    art.style.setProperty('--g', фон);
+  }
+
+  const label = document.createElement('span');
+  label.className = 'ios-icon__label';
+  label.textContent = подпись;
+
+  b.append(art, label);
+  if (открыть) b.addEventListener('click', () => { последнийЗначок = b; открыть() });
+  return b;
+}
+
+function собратьТелефон(){
+  const иконка = Math.round(Math.min(68, innerWidth * 0.155));
+  document.documentElement.style.setProperty('--ios-icon', иконка + 'px');
+
+  const высотаЯчейки = иконка + 6 + 15;                  // значок + зазор + подпись
+  const доступно     = страницыEl.clientHeight || innerHeight * 0.6;
+
+  let строк = Math.floor((доступно + 22) / (высотаЯчейки + 22));
+  /* Потолок в четыре ряда осознанный: с ним страница всегда не одна,
+     и спрингборд листается, а не тянется одним полотном. */
+  строк = Math.max(3, Math.min(4, строк));
+
+  /* Межрядный шаг тянется под высоту экрана: иначе на высоком телефоне
+     четыре ряда жмутся кверху и полэкрана остаётся пустым. */
+  const зазор = Math.round(Math.max(22, Math.min(60,
+                 (доступно - строк * высотаЯчейки) / Math.max(1, строк - 1))));
+
+  const все = [
+    ...PROJECTS.map((p, i) => ({
+      подпись: p.name,
+      фон: p.img ? `url("${p.img}")` : p.g,
+      открыть: () => openProject(i),
+    })),
+    { подпись:'Корзина', картинка:'icons/trash.png', открыть: openTrash },
+  ];
+
+  /* Страницы набираются по порядку и до отказа — так это устроено в iOS.
+     Ровнять их по количеству нельзя: тогда первая страница получается
+     наполовину пустой, а на телефоне это читается как недоделка. */
+  const наСтранице = строк * 4;
+  const страниц    = Math.max(1, Math.ceil(все.length / наСтранице));
+  const поровну    = наСтранице;
+
+  страницыEl.innerHTML = '';
+  точкиEl.innerHTML = '';
+
+  for (let с = 0; с < страниц; с++){
+    const стр = document.createElement('div');
+    стр.className = 'ios-page';
+    стр.style.rowGap = зазор + 'px';
+    все.slice(с * поровну, (с + 1) * поровну)
+       .forEach((эл, i) => стр.append(значок(эл, 220 + i * 22)));
+    страницыEl.append(стр);
+
+    const т = document.createElement('span');
+    т.className = 'ios-dots__d' + (с === 0 ? ' is-on' : '');
+    точкиEl.append(т);
+  }
+
+  докTel.innerHTML = '';
+  ДОК_ТЕЛЕФОНА.forEach(эл => докTel.append(значок(эл, 0)));
+
+  страницыEl.scrollLeft = 0;
+}
+
+/* точки следят за листанием */
+страницыEl.addEventListener('scroll', () => {
+  const ш = страницыEl.clientWidth || 1;
+  const н = Math.round(страницыEl.scrollLeft / ш);
+  [...точкиEl.children].forEach((т, i) => т.classList.toggle('is-on', i === н));
+}, { passive:true });
+
+/* ---------- «приложение» вместо окна ---------- */
+let приложение = null;
+
+function открытьПриложение({ название, bodyHTML }){
+  if (приложение) приложение.закрыть();
+
+  const источник = последнийЗначок;
+  const art = источник && источник.querySelector('.ios-icon__art');
+  const r = art ? art.getBoundingClientRect()
+                : { left:innerWidth/2, top:innerHeight*0.4, width:innerWidth*0.2, height:0 };
+
+  const el = document.createElement('section');
+  el.className = 'appview';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', название);
+  /* разворачиваем ровно из значка — так это делает iOS */
+  el.style.setProperty('--s',  (r.width / innerWidth).toFixed(4));
+  el.style.setProperty('--ox', ((r.left + r.width / 2) / innerWidth * 100).toFixed(2) + '%');
+  el.style.setProperty('--oy', ((r.top + r.height / 2) / innerHeight * 100).toFixed(2) + '%');
+
+  el.innerHTML = `
+    <div class="appview__bar">
+      <span class="appview__title"></span>
+      <button class="appview__close" type="button" aria-label="Закрыть">
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="appview__body">${bodyHTML}</div>
+    <div class="appview__grip" aria-hidden="true"></div>`;
+  el.querySelector('.appview__title').textContent = название;
+
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('is-open'));
+
+  const закрыть = () => {
+    if (приложение && приложение.el !== el) return;
+    приложение = null;
+    el.classList.remove('is-open');
+    el.style.transform = '';
+    el.addEventListener('transitionend', () => el.remove(), { once:true });
+    setTimeout(() => el.remove(), 700);      // страховка, если transitionend не придёт
+    if (источник) источник.focus();
+  };
+  el.querySelector('.appview__close').addEventListener('click', закрыть);
+
+  /* свайп вниз — основной жест закрытия на iOS */
+  let тяга = null;
+  const тело = el.querySelector('.appview__body');
+  el.addEventListener('pointerdown', e => {
+    if (e.target.closest('.appview__close')) return;
+    if (тело.contains(e.target) && тело.scrollTop > 0) return;   // сначала домотать содержимое
+    тяга = e.clientY;
+  });
+  el.addEventListener('pointermove', e => {
+    if (тяга === null) return;
+    const d = e.clientY - тяга;
+    if (d <= 0) return;
+    el.classList.add('is-dragging');
+    el.style.transform = `translateY(${d}px) scale(${(1 - Math.min(d, 400) / 1600).toFixed(4)})`;
+  });
+  const конец = e => {
+    if (тяга === null) return;
+    const d = e.clientY - тяга;
+    тяга = null;
+    el.classList.remove('is-dragging');
+    if (d > 90) закрыть(); else el.style.transform = '';
+  };
+  el.addEventListener('pointerup', конец);
+  el.addEventListener('pointercancel', конец);
+
+  приложение = { el, закрыть };
+  return приложение;
+}
+
+/* ---------- часы строки состояния ---------- */
+function телЧасы(){ телВремя.textContent = fmtTime.format(new Date()) }
+
+/* ---------- сборка и пересборка ---------- */
+const наТелефоне = () => matchMedia('(max-width:640px)').matches;
+
+function обновитьТелефон(){
+  if (!наТелефоне()) return;
+  собратьТелефон();
+  телЧасы();
+}
+обновитьТелефон();
+setInterval(() => { if (наТелефоне()) телЧасы() }, 1000);
+addEventListener('resize', обновитьТелефон);
+addEventListener('orientationchange', обновитьТелефон);
 
 /* ============================================================
    Гейт загрузки: анимации стартуют, когда готовы шрифты.
